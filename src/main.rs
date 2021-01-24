@@ -1,7 +1,7 @@
 // #![deny(warnings)]
 
 use std::convert::Infallible;
-use hyper::{Body, Client, Request, Response, Server};
+use hyper::{Body, Request, Response, Server};
 use hyper::service::{make_service_fn, service_fn};
 
 async fn ics_merge(_: Request<Body>) -> Result<Response<Body>, Infallible> {
@@ -12,7 +12,7 @@ async fn ics_merge(_: Request<Body>) -> Result<Response<Body>, Infallible> {
 
     let resp = match fetch_calendar_content(calendars[0]).await {
         Ok(f) => f,
-        Err(E) => String::from("Error")
+        Err(_e) => String::new()
     };
 
     Ok(Response::new(Body::from(resp)))
@@ -25,14 +25,14 @@ async fn fetch_calendar_content(url: &str) -> Result<String, Box<dyn std::error:
         .await?;
     let mut in_content = false;
     let mut content = String::from("");
-    for lineR in resp.lines() {
-        let line = String::from(lineR);
-        if (!in_content) {
-            if (line.starts_with("BEGIN:VTIMEZONE")) {
+    for ics_line in resp.lines() {
+        let line = String::from(ics_line);
+        if !in_content {
+            if line.starts_with("BEGIN:VTIMEZONE") {
                 in_content = true;
                 content.push_str(&line)
             }
-        } else if (!line.starts_with("END:VCALENDAR")) {
+        } else if !line.starts_with("END:VCALENDAR") {
             content.push_str(&line);
         }
     }
