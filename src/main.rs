@@ -5,10 +5,12 @@ use std::convert::Infallible;
 use hyper::{Body, Method, Request, Response, Server, StatusCode};
 use hyper::service::{make_service_fn, service_fn};
 
+use icsutils::*;
+
 async fn ics_merge(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => {
-            Ok(Response::new(Body::from("Try POSTing data to /echo")))
+            Ok(Response::new(Body::from("Try requesting to /fxzo.ics")))
         }
         (&Method::GET, "/fxzo.ics") => {
             let calendars = [
@@ -18,16 +20,17 @@ async fn ics_merge(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                 "https://outlook.office365.com/owa/calendar/4e690d4c256b4fca9a11d2c03328a21c@lumena.tech/04e70dc6d07c4e6c8c01377ebdab5c6f9379776718195930947/calendar.ics"
             ];
 
-            let mut resp = String::from("BEGIN:VCALENDAR\n");
+            let mut resp = String::from(BEGIN_VCALENDAR);
+            resp.push_str(NEW_LINE);
 
             for cal in &calendars {
-                let r = match icsutils::fetch_calendar_content(cal).await {
-                    Ok(f) => f,
+                let ics_content = match reqwest::get(*cal).await {
+                    Ok(r) => r.text().await.unwrap_or_default(),
                     Err(_e) => String::new()
                 };
-                resp.push_str(&r);
+                resp.push_str(&fetch_calendar_content(ics_content));
             }
-            resp.push_str("END:VCALENDAR");
+            resp.push_str(END_VCALENDAR);
 
             let response = Response::builder()
                 .status(200)
