@@ -40,6 +40,11 @@ pub fn fetch_calendar_content(resp: String) -> String {
 }
 
 fn process_content_line(content: &mut String, line: &str) {
-    content.push_str(&line);
-    content.push_str(NEW_LINE);
+    if line.starts_with("SUMMARY:") {
+        content.push_str("SUMMARY:InTech");
+        content.push_str(NEW_LINE);
+    } else if !line.starts_with("DESCRIPTION:") {
+        content.push_str(&line);
+        content.push_str(NEW_LINE);
+    }
 }
