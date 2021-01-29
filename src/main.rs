@@ -14,7 +14,8 @@ async fn ics_merge() -> impl Responder {
         "https://outlook.office365.com/owa/calendar/4e690d4c256b4fca9a11d2c03328a21c@lumena.tech/04e70dc6d07c4e6c8c01377ebdab5c6f9379776718195930947/calendar.ics"
     ];
 
-    let mut resp = String::new();
+    let mut resp = String::from(BEGIN_VCALENDAR);
+    resp.push_str(NEW_LINE);
 
     let client = Client::default();
     for cal in &calendars {
@@ -34,7 +35,9 @@ async fn ics_merge() -> impl Responder {
         println!("Calendar : {} fetched", &cal);
         resp.push_str(&fetch_calendar_content(ics_content));
     }
-    HttpResponse::Ok().body(resp)
+
+    resp.push_str(END_VCALENDAR);
+    HttpResponse::Ok().header("Content-Type", "text/calendar").body(resp)
 }
 
 #[get("/")]
