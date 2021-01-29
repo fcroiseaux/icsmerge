@@ -1,0 +1,37 @@
+[package]
+authors = ["Peltoche <dev@halium.fr>"]
+categories = ["parsing"]
+description = "Ical/Vcard parser for Rust"
+documentation = "https://docs.rs/ical"
+homepage = "https://github.com/Peltoche/ical-rs"
+keywords = ["ical", "vcard", "parser"]
+license-file = "./LICENSE"
+name = "ical"
+readme = "./README.md"
+repository = "https://github.com/Peltoche/ical-rs"
+version = "0.6.0"
+
+[badges]
+
+[badges.travis-ci]
+branch = "master"
+repository = "https://travis-ci.org/Peltoche/ical-rs"
+
+
+
+[dependencies]
+thiserror = "1.0.20"
+
+
+[features]
+default = ["vcard", "ical"]
+ical = ["property"]
+line = []
+property = ["line"]
+vcard = ["property"]
+
+[lib]
+doc = true
+name = "ical"
+path = "src/lib.rs"
+test = true

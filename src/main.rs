@@ -1,6 +1,6 @@
 // #![deny(warnings)]
 
-use actix_web::{App, get, HttpResponse, HttpServer, Responder, ResponseError};
+use actix_web::{App, get, HttpResponse, HttpServer, Responder};
 use actix_web::client::Client;
 
 use icsutils::*;
@@ -14,33 +14,26 @@ async fn ics_merge() -> impl Responder {
         "https://outlook.office365.com/owa/calendar/4e690d4c256b4fca9a11d2c03328a21c@lumena.tech/04e70dc6d07c4e6c8c01377ebdab5c6f9379776718195930947/calendar.ics"
     ];
 
-    let mut resp = String::from(BEGIN_VCALENDAR);
-    resp.push_str(NEW_LINE);
+    let mut resp = String::new();
 
     let client = Client::default();
-
     for cal in &calendars {
-        let ics_content = match client
-            .get(*cal)
-            .send()
-            .await {
+        let ics_content: String = match client.get(*cal).send().await {
             Ok(mut resp) => match resp.body().limit(102400000).await {
                 Ok(r) => String::from_utf8(r.to_vec()).unwrap_or_default(),
                 Err(e) => {
                     println!("{}", e);
-                    String::from(e.status_code().as_str())
+                    String::new()
                 }
             },
             Err(e1) => {
                 println!("{}", e1);
-                String::from(e1.status_code().as_str())
+                String::new()
             }
         };
         println!("Calendar : {} fetched", &cal);
         resp.push_str(&fetch_calendar_content(ics_content));
     }
-    resp.push_str(END_VCALENDAR);
-
     HttpResponse::Ok().body(resp)
 }
 
