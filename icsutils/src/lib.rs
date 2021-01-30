@@ -43,7 +43,10 @@ fn process_content_line(cal_name: &str, content: &mut String, line: &str) {
     if line.starts_with("SUMMARY:") {
         content.push_str(&("SUMMARY:".to_owned() + cal_name));
         content.push_str(NEW_LINE);
-    } else if !line.starts_with("DESCRIPTION:") {
+    } else if line.starts_with("LOCATION:") {
+        content.push_str("LOCATION:");
+        content.push_str(NEW_LINE);
+    } if !line.starts_with("DESCRIPTION:") {
         content.push_str(&line);
         content.push_str(NEW_LINE);
     }
