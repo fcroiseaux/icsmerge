@@ -15,7 +15,7 @@ pub const BEGIN_VCALENDAR: &str = "BEGIN:VCALENDAR";
 pub const END_VCALENDAR: &str = "END:VCALENDAR";
 pub const NEW_LINE: &str = "\n";
 
-pub fn fetch_calendar_content(resp: String) -> String {
+pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
     let mut content = String::new();
     let sreader = StringReader::new(&resp);
     let buf = BufReader::new(sreader);
@@ -32,16 +32,16 @@ pub fn fetch_calendar_content(resp: String) -> String {
                 content.push_str(NEW_LINE);
             }
         } else if !line.starts_with(END_VCALENDAR) {
-            process_content_line(&mut content, &line);
+            process_content_line(calendar, &mut content, &line);
         }
     }
 
     return content;
 }
 
-fn process_content_line(content: &mut String, line: &str) {
+fn process_content_line(cal_name: &str, content: &mut String, line: &str) {
     if line.starts_with("SUMMARY:") {
-        content.push_str("SUMMARY:InTech");
+        content.push_str(&("SUMMARY:".to_owned() + cal_name));
         content.push_str(NEW_LINE);
     } else if !line.starts_with("DESCRIPTION:") {
         content.push_str(&line);
