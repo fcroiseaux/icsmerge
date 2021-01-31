@@ -13,6 +13,10 @@ mod tests {
 pub const BEGIN_VTIMEZONE: &str = "BEGIN:VTIMEZONE";
 pub const BEGIN_VCALENDAR: &str = "BEGIN:VCALENDAR";
 pub const END_VCALENDAR: &str = "END:VCALENDAR";
+pub const LOCATION: &str = "LOCATION:";
+pub const SUMMARY: &str = "SUMMARY:";
+pub const DESCRIPTION: &str = "DESCRIPTION:";
+
 pub const NEW_LINE: &str = "\n";
 
 pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
@@ -39,15 +43,18 @@ pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
 }
 
 fn process_content_line(cal_name: &str, content: &mut String, line: &str) {
-    if line.starts_with("SUMMARY:") {
-        content.push_str(&("SUMMARY:".to_owned() + cal_name));
+    if line.starts_with(SUMMARY) {
+        content.push_str(&(SUMMARY.to_owned() + cal_name));
         content.push_str(NEW_LINE);
     } else
-    if line.starts_with("LOCATION:") {
-        content.push_str("LOCATION:");
+    if line.starts_with(LOCATION) {
+        content.push_str(LOCATION);
         content.push_str(NEW_LINE);
     } else
-    if !line.starts_with("DESCRIPTION:") {
+    if line.starts_with(DESCRIPTION) {
+        content.push_str(DESCRIPTION);
+        content.push_str(NEW_LINE);
+    } else {
         content.push_str(&line);
         content.push_str(NEW_LINE);
     }
