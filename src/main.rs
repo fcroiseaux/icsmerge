@@ -1,11 +1,13 @@
 // #![deny(warnings)]
 
-use actix_web::{App, get, HttpResponse, HttpServer, Responder};
+use std::sync::Mutex;
+
+use actix_web::{App, get, HttpResponse, HttpServer, Responder, web};
 use actix_web::client::Client;
+use rand::Rng;
+
 use icsutils::*;
 
-
-#[get("/fxzo.ics")]
 async fn ics_merge() -> impl Responder {
     let calendars = [
         ("InTech", "https://webmail.intech.lu/owa/calendar/25be2d37664e47899a9c952e5d652e98@Intech.lu/497fedb4dfb34173a0770b0879cbacbc17006863668209442216/calendar.ics"),
@@ -19,7 +21,6 @@ async fn ics_merge() -> impl Responder {
 
     let client = Client::default();
     for cal in &calendars {
-
         let ics_content: String = match client.get(cal.1).send().await {
             Ok(mut resp) => match resp.body().limit(102400000).await {
                 Ok(r) => String::from_utf8(r.to_vec()).unwrap_or_default(),
@@ -41,20 +42,31 @@ async fn ics_merge() -> impl Responder {
     HttpResponse::Ok().header("Content-Type", "text/calendar").body(resp)
 }
 
+struct AppState {
+    cal_url: Mutex<String>
+}
+
 #[get("/")]
-async fn home() -> impl Responder {
-    HttpResponse::Ok().body("Try requesting to /fxzo.ics")
+async fn index(url: web::Data<AppState>) -> String {
+    let url_s = &url.cal_url;
+    format!("Hello {}!", url_s.lock().unwrap())
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    let state_url = web::Data::new(AppState {
+        cal_url: Mutex::new(format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics"),
+    });
+
+    HttpServer::new(move || {
         App::new()
-            .service(home)
-            .service(ics_merge)
+            .app_data(state_url.clone())
+            .service(index)
+            .route(&state_url.cal_url.lock().unwrap(), web::get().to(ics_merge))
     })
         .bind("0.0.0.0:8080")?
         .run()
         .await
+
 }
 
