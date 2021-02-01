@@ -1,7 +1,5 @@
 // #![deny(warnings)]
 
-use std::sync::Mutex;
-
 use actix_web::{App, get, HttpResponse, HttpServer, Responder, web};
 use actix_web::client::Client;
 use rand::Rng;
@@ -43,26 +41,26 @@ async fn ics_merge() -> impl Responder {
 }
 
 struct AppState {
-    cal_url: Mutex<String>
+    cal_url: String
 }
 
 #[get("/")]
 async fn index(url: web::Data<AppState>) -> String {
     let url_s = &url.cal_url;
-    format!("Hello {}!", url_s.lock().unwrap())
+    format!("Try to send request to {}", url_s)
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let state_url = web::Data::new(AppState {
-        cal_url: Mutex::new(format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics"),
+        cal_url: format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics",
     });
 
     HttpServer::new(move || {
         App::new()
             .app_data(state_url.clone())
             .service(index)
-            .route(&state_url.cal_url.lock().unwrap(), web::get().to(ics_merge))
+            .route(&state_url.cal_url, web::get().to(ics_merge))
     })
         .bind("0.0.0.0:8080")?
         .run()
