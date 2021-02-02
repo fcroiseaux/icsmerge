@@ -22,42 +22,41 @@ pub const VERSION: &str = "VERSION:";
 pub const X_WR_CALNAME: &str = "X-WR-CALNAME:";
 pub const CALSCALE: &str = "CALSCALE:";
 
+const ICAL_KEYWORDS: [&str; 9] = [
+    BEGIN_VCALENDAR,
+    END_VCALENDAR,
+    LOCATION,
+    SUMMARY,
+    METHOD,
+    PRODID,
+    VERSION,
+    X_WR_CALNAME,
+    CALSCALE
+];
+
 pub const NEW_LINE: &str = "\n";
 
 pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
-    let mut content = String::new();
     let sreader = StringReader::new(&resp);
     let buf = BufReader::new(sreader);
-
     let reader = ical::LineReader::new(buf);
-    let mut in_content = false;
 
-    for ics_line in reader {
-        let line = ics_line.as_str();
-        if !in_content {
-            if line.starts_with(BEGIN_VTIMEZONE) {
-                in_content = true;
-                content.push_str(&line);
-                content.push_str(NEW_LINE);
-            }
-        } else if !line.starts_with(END_VCALENDAR) {
-            process_content_line(calendar, &mut content, &line);
+    fn not_filtered_keywords(cal_line: &str, keywords: Vec<&str>) -> bool {
+        keywords
+            .iter()
+            .find(|&&l| cal_line.starts_with(l))
+            .is_none()
+    }
+
+    let c = reader.filter(|l| not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()));
+    let r = c.map(|l| {
+        let ll = l.as_str();
+        if ll.starts_with(SUMMARY) {
+            String::from(&(SUMMARY.to_owned() + calendar))
+        } else {
+            ll.to_string()
         }
-    }
-    return content;
-}
+    });
 
-fn process_content_line(cal_name: &str, content: &mut String, line: &str) {
-    if line.starts_with(SUMMARY) {
-        content.push_str(&(SUMMARY.to_owned() + cal_name));
-    } else
-    if line.starts_with(LOCATION) {
-        content.push_str(LOCATION);
-    } else
-    if line.starts_with(DESCRIPTION) {
-        content.push_str(DESCRIPTION);
-    } else {
-        content.push_str(&line);
-    }
-    content.push_str(NEW_LINE);
+    r.collect::<String>()
 }

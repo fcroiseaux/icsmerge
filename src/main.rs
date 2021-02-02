@@ -47,13 +47,15 @@ struct AppState {
 #[get("/")]
 async fn index(url: web::Data<AppState>) -> String {
     let url_s = &url.cal_url;
-    format!("Try to send request to {}", url_s)
+    format!("Try to send request to /{}", url_s)
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+
+    let cal_s = format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics";
     let state_url = web::Data::new(AppState {
-        cal_url: format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics",
+        cal_url: cal_s
     });
 
     HttpServer::new(move || {
