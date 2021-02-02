@@ -26,10 +26,12 @@ const ICAL_KEYWORDS: [&str; 9] = [
     BEGIN_VCALENDAR,
     END_VCALENDAR,
     METHOD,
+    LOCATION,
+    DESCRIPTION,
     PRODID,
     VERSION,
     X_WR_CALNAME,
-    CALSCALE
+    CALSCALE,
 ];
 
 pub const NEW_LINE: &str = "\n";
@@ -46,15 +48,22 @@ pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
             .is_none()
     }
 
-    let c = reader.filter(|l| not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()));
-    let r = c.map(|l| {
-        let ll = l.as_str();
-        if ll.starts_with(SUMMARY) {
-            String::from(&(SUMMARY.to_owned() + calendar + NEW_LINE))
-        } else {
-            ll.to_string() + NEW_LINE
-        }
-    });
+    //let c = reader.filter(|l| not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()));
+
+    let r =
+        reader.filter_map(
+            |l| match not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()) {
+                false => None,
+                true => {
+                    let ll = l.as_str();
+                    if ll.starts_with(SUMMARY) {
+                        Some(String::from(&(SUMMARY.to_owned() + calendar + NEW_LINE)))
+                    } else {
+                        Some(ll.to_string() + NEW_LINE)
+                    }
+                }
+            },
+        );
 
     r.collect::<String>()
 }
