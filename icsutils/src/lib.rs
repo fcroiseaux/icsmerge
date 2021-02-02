@@ -22,11 +22,9 @@ pub const VERSION: &str = "VERSION:";
 pub const X_WR_CALNAME: &str = "X-WR-CALNAME:";
 pub const CALSCALE: &str = "CALSCALE:";
 
-const ICAL_KEYWORDS: [&str; 9] = [
+const ICAL_KEYWORDS: [&str; 7] = [
     BEGIN_VCALENDAR,
     END_VCALENDAR,
-    LOCATION,
-    DESCRIPTION,
     METHOD,
     PRODID,
     VERSION,
