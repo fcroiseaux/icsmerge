@@ -26,7 +26,7 @@ const ICAL_KEYWORDS: [&str; 9] = [
     BEGIN_VCALENDAR,
     END_VCALENDAR,
     LOCATION,
-    SUMMARY,
+    DESCRIPTION,
     METHOD,
     PRODID,
     VERSION,
@@ -52,9 +52,9 @@ pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
     let r = c.map(|l| {
         let ll = l.as_str();
         if ll.starts_with(SUMMARY) {
-            String::from(&(SUMMARY.to_owned() + calendar))
+            String::from(&(SUMMARY.to_owned() + calendar + NEW_LINE))
         } else {
-            ll.to_string()
+            ll.to_string() + NEW_LINE
         }
     });
 
