@@ -6,6 +6,24 @@ use rand::Rng;
 
 use icsutils::*;
 
+
+async fn get_http_request(url :&str) -> String {
+    let client = Client::default();
+    match client.get(url).send().await {
+        Ok(mut resp) => match resp.body().limit(102400000).await {
+            Ok(r) => String::from_utf8(r.to_vec()).unwrap_or_default(),
+            Err(e) => {
+                println!("{}", e);
+                String::new()
+            }
+        },
+        Err(e1) => {
+            println!("{}", e1);
+            String::new()
+        }
+    }
+}
+
 async fn ics_merge() -> impl Responder {
     let calendars = [
         ("InTech", "https://webmail.intech.lu/owa/calendar/25be2d37664e47899a9c952e5d652e98@Intech.lu/497fedb4dfb34173a0770b0879cbacbc17006863668209442216/calendar.ics"),
@@ -17,28 +35,16 @@ async fn ics_merge() -> impl Responder {
     let mut resp = String::from(BEGIN_VCALENDAR);
     resp.push_str(NEW_LINE);
 
-    let client = Client::default();
     for cal in &calendars {
-        let ics_content: String = match client.get(cal.1).send().await {
-            Ok(mut resp) => match resp.body().limit(102400000).await {
-                Ok(r) => String::from_utf8(r.to_vec()).unwrap_or_default(),
-                Err(e) => {
-                    println!("{}", e);
-                    String::new()
-                }
-            },
-            Err(e1) => {
-                println!("{}", e1);
-                String::new()
-            }
-        };
+        let ics_content = get_http_request(cal.1).await;
         println!("Calendar : {} fetched", cal.0);
-        resp.push_str(&fetch_calendar_content(cal.0, ics_content));
+        resp.push_str(&parse_calendar_content(cal.0, ics_content));
     }
 
     resp.push_str(END_VCALENDAR);
     HttpResponse::Ok().header("Content-Type", "text/calendar").body(resp)
 }
+
 
 struct AppState {
     cal_url: String

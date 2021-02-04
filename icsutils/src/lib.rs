@@ -2,14 +2,6 @@ use std::io::BufReader;
 
 use stringreader::StringReader;
 
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
-
 pub const BEGIN_VTIMEZONE: &str = "BEGIN:VTIMEZONE";
 pub const BEGIN_VCALENDAR: &str = "BEGIN:VCALENDAR";
 pub const END_VCALENDAR: &str = "END:VCALENDAR";
@@ -36,11 +28,7 @@ const ICAL_KEYWORDS: [&str; 9] = [
 
 pub const NEW_LINE: &str = "\n";
 
-pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
-    let sreader = StringReader::new(&resp);
-    let buf = BufReader::new(sreader);
-    let reader = ical::LineReader::new(buf);
-
+pub fn parse_calendar_content(calendar: &str, resp: String) -> String {
     fn not_filtered_keywords(cal_line: &str, keywords: Vec<&str>) -> bool {
         keywords
             .iter()
@@ -48,8 +36,7 @@ pub fn fetch_calendar_content(calendar: &str, resp: String) -> String {
             .is_none()
     }
 
-    //let c = reader.filter(|l| not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()));
-
+    let reader = ical::LineReader::new(BufReader::new(StringReader::new(&resp)));
     let r =
         reader.filter_map(
             |l| match not_filtered_keywords(l.as_str(), ICAL_KEYWORDS.to_vec()) {
