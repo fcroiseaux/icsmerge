@@ -25,11 +25,9 @@ async fn get_http_request(url :&str) -> String {
 }
 
 async fn ics_merge() -> impl Responder {
-    let calendars = [
-        ("InTech", "https://webmail.intech.lu/owa/calendar/25be2d37664e47899a9c952e5d652e98@Intech.lu/497fedb4dfb34173a0770b0879cbacbc17006863668209442216/calendar.ics"),
-        ("Perso", "https://calendar.google.com/calendar/ical/fcroiseaux%40gmail.com/private-db183d5c924a98df943d4ed104fbb95f/basic.ics"),
-        ("Tokeny", "https://calendar.google.com/calendar/u/1?cid=ZmFicmljZUB0b2tlbnkuY29t"),
-        ("Lumena", "https://outlook.office365.com/owa/calendar/4e690d4c256b4fca9a11d2c03328a21c@lumena.tech/04e70dc6d07c4e6c8c01377ebdab5c6f9379776718195930947/calendar.ics")
+    // calendars is an Array of tuples in the form of [("cal1 name", "cal1_url"),("cal1 name", "cal1_url")]
+    // next step is to replace with json file content
+    let calendars:[(&str,&str);0] = [
     ];
 
     let mut resp = String::from(BEGIN_VCALENDAR);
