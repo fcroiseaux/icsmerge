@@ -1,4 +1,6 @@
 target/
 *.iml
 /.idea/
+calendars.db
+calendars.db_calendars
 calendars.json
