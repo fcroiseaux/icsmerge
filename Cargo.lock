@@ -1073,8 +1073,6 @@ name = "icsmerge"
 version = "0.1.0"
 dependencies = [
  "actix-web",
- "bson 1.1.0",
- "ejdb",
  "icsutils",
  "pretty_env_logger",
  "rand 0.8.3",
@@ -1086,7 +1084,11 @@ dependencies = [
 name = "icsutils"
 version = "0.1.0"
 dependencies = [
+ "bson 1.1.0",
+ "ejdb",
  "ical",
+ "rand 0.8.3",
+ "serde",
  "stringreader",
 ]
 

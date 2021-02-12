@@ -2,6 +2,8 @@ use std::io::BufReader;
 
 use stringreader::StringReader;
 
+pub mod db;
+
 pub const BEGIN_VTIMEZONE: &str = "BEGIN:VTIMEZONE";
 pub const BEGIN_VCALENDAR: &str = "BEGIN:VCALENDAR";
 pub const END_VCALENDAR: &str = "END:VCALENDAR";
