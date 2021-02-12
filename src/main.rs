@@ -4,7 +4,7 @@ use actix_web::client::Client;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
 use icsutils::*;
-use icsutils::db::ejdb2::*;
+use icsutils::db::sled2::*;
 
 async fn get_http_request(url: &str) -> String {
     let client = Client::default();
@@ -72,9 +72,14 @@ async fn readdb() -> String {
 }
 
 #[get("/get_cal/{cal_url}")]
-async fn get_cal(path: web::Path<(String,)>) -> String {
-    let url = path.into_inner().0;
-    serde_json::to_string(&get_cals_from_url(url)).unwrap()
+async fn get_cal(path: web::Path<(String,)>) -> impl Responder {
+    let cal_url = path.into_inner().0;
+    let cal_merge = get_cals_from_url(cal_url);
+    match cal_merge.first() {
+        Some(cal_m) => HttpResponse::Ok()
+            .body(serde_json::to_string(cal_m).unwrap()),
+        None => HttpResponse::NotFound().body("No merge configuraion found"),
+    }
 }
 
 #[get("/{cal_url}.ics")]

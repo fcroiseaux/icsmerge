@@ -1,6 +1,7 @@
 target/
 *.iml
+*.json
 /.idea/
 calendars.db
 calendars.db_calendars
-calendars.json
+mergeics_sled_db
