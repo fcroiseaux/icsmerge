@@ -16,10 +16,11 @@ struct IcsCal {
     ics_url: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 struct CalMerge {
     //The list of ical urls we want to merge
     name: String,
+    url: String,
     calendars: Vec<IcsCal>,
 }
 
@@ -60,6 +61,20 @@ async fn ics_merge() -> impl Responder {
         .body(resp)
 }
 
+async fn merge_calendars(calendars: Vec<IcsCal>) -> String {
+    let mut resp = String::from(BEGIN_VCALENDAR);
+    resp.push_str(NEW_LINE);
+
+    for cal in &calendars {
+        let ics_content = get_http_request(&cal.ics_url).await;
+        println!("Calendar : {} fetched", &cal.name);
+        resp.push_str(&parse_calendar_content(&cal.name, ics_content));
+    }
+
+    resp.push_str(END_VCALENDAR);
+    resp
+}
+
 struct AppState {
     cal_url: String,
 }
@@ -74,15 +89,17 @@ async fn index(url: web::Data<AppState>) -> String {
 async fn create_cal(cal: web::Json<CalMerge>) -> String {
     let db = open_db();
     let cal_coll = db.collection("calendars").unwrap();
-    let cal_struct: CalMerge = CalMerge {
-        name: cal.name.to_string(),
-        calendars: cal.calendars.to_vec(),
+    let cal_url = match cal.url.as_str() {
+        "" => format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics",
+        url_s => url_s.to_string(),
     };
+
     let mut d = bson::Document::new();
-    d.insert("name", cal_struct.name);
-    d.insert("calendars", bson::to_bson(&cal_struct.calendars).unwrap());
+    d.insert("name", cal.name.to_string());
+    d.insert("url", cal_url.to_string());
+    d.insert("calendars", bson::to_bson(&cal.calendars.to_vec()).unwrap());
     match cal_coll.save(d) {
-        Ok(r) => format!("Saved /{:?}", r),
+        Ok(_r) => format!("/{}", cal_url),
         Err(e) => format!("Error /{:?}", e),
     }
 }
@@ -90,38 +107,53 @@ async fn create_cal(cal: web::Json<CalMerge>) -> String {
 #[get("/init")]
 async fn init() -> String {
     let db = open_db();
-    db.drop_collection("calendars",true).unwrap();
-    let cal_coll = db.collection("calendars").unwrap();
-    cal_coll
-        .save(bson! {
-            "name" => "Fabrice",
-            "calendars" => [{"name" => "InTech", "ics_url" => "12345"}, {"name" => "Lumena", "ics_url" => "567890"}]
-        })
-        .unwrap();
-    "OK".to_string()
+    db.drop_collection("calendars", true).unwrap();
+    "DONE DB initialized".to_string()
 }
 
 #[get("/readdb")]
 async fn readdb() -> String {
-    format!("{:?}", get_cals_from_db())
+    serde_json::to_string(&get_cals_from_db()).unwrap()
 }
 
-#[get("/{url_ics}.ics")]
-async fn serve_ics(path: web::Path<(String,)>) -> String {
-    format!("{:?}", path.into_inner().0)
+#[get("/get_cal/{cal_url}")]
+async fn get_cal(path: web::Path<(String,)>) -> String {
+    let url = path.into_inner().0;
+    serde_json::to_string(&get_cals_from_url(url)).unwrap()
+}
+
+#[get("/{cal_url}.ics")]
+async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
+    let cal_url = path.into_inner().0;
+    let cal_merge = get_cals_from_url(cal_url + ".ics");
+    match cal_merge.first() {
+        Some(cal_m) => HttpResponse::Ok()
+            .header("Content-Type", "text/calendar")
+            .body(merge_calendars(cal_m.clone().calendars).await),
+        None => HttpResponse::NotFound().body("No merge configuraion found"),
+    }
 }
 
 fn open_db() -> Database {
     Database::open_with_mode(
         "calendars.db",
         DatabaseOpenMode::default() | DatabaseOpenMode::CREATE,
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 fn get_cals_from_db() -> Vec<CalMerge> {
+    get_cals_from_query(query::Q.empty())
+}
+
+fn get_cals_from_url(url: String) -> Vec<CalMerge> {
+    get_cals_from_query(query::Q.field("url").eq(url))
+}
+
+fn get_cals_from_query(q: query::Query) -> Vec<CalMerge> {
     let db = open_db();
     let cal_coll = db.collection("calendars").unwrap();
-    let doc_list = cal_coll.query(query::Query::new(), query::QH.empty());
+    let doc_list = cal_coll.query(q, query::QH.empty());
     let items = doc_list.find().unwrap();
     items
         .map(|doc| {
@@ -145,6 +177,7 @@ async fn main() -> std::io::Result<()> {
             .service(readdb)
             .service(serve_ics)
             .service(create_cal)
+            .service(get_cal)
             .route(&state_url.cal_url, web::get().to(ics_merge))
     })
     .bind("0.0.0.0:8080")?
