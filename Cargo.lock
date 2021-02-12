@@ -1075,7 +1075,6 @@ dependencies = [
  "actix-web",
  "icsutils",
  "pretty_env_logger",
- "rand 0.8.3",
  "serde",
  "serde_json",
 ]

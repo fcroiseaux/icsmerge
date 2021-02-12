@@ -2,9 +2,9 @@
 
 use actix_web::client::Client;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
-use rand::Rng;
 
 use icsutils::*;
+use icsutils::db::ejdb2::*;
 
 async fn get_http_request(url: &str) -> String {
     let client = Client::default();
@@ -54,7 +54,7 @@ async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> String {
         url: cal.url.to_string(),
         calendars: cal.calendars.to_vec()
     };
-    match icsutils::db::create_cal(cal_struct) {
+    match insert_cal(cal_struct) {
         Ok(r) => r,
         Err(e) => format!("Error /{:?}", e),
     }
@@ -62,25 +62,25 @@ async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> String {
 
 #[get("/init")]
 async fn init() -> String {
-    icsutils::db::init();
+    init_db();
     "DONE DB initialized".to_string()
 }
 
 #[get("/readdb")]
 async fn readdb() -> String {
-    serde_json::to_string(&icsutils::db::get_cals_from_db()).unwrap()
+    serde_json::to_string(&get_cals_from_db()).unwrap()
 }
 
 #[get("/get_cal/{cal_url}")]
 async fn get_cal(path: web::Path<(String,)>) -> String {
     let url = path.into_inner().0;
-    serde_json::to_string(&icsutils::db::get_cals_from_url(url)).unwrap()
+    serde_json::to_string(&get_cals_from_url(url)).unwrap()
 }
 
 #[get("/{cal_url}.ics")]
 async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
     let cal_url = path.into_inner().0;
-    let cal_merge = icsutils::db::get_cals_from_url(cal_url + ".ics");
+    let cal_merge = get_cals_from_url(cal_url + ".ics");
     match cal_merge.first() {
         Some(cal_m) => HttpResponse::Ok()
             .header("Content-Type", "text/calendar")
@@ -93,12 +93,9 @@ async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let cal_s = format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics";
-    let state_url = web::Data::new(AppState { cal_url: cal_s });
 
     HttpServer::new(move || {
         App::new()
-            .app_data(state_url.clone())
             .service(index)
             .service(init)
             .service(readdb)
