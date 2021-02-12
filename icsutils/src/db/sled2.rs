@@ -1,9 +1,12 @@
 use crate::db::*;
 use rand::Rng;
 
-pub fn init_db() {
+pub fn init_db() -> Result<String, String> {
     let db = open_db();
-    db.clear();
+    match db.clear() {
+        Ok(_)=> Ok("DB initialized".to_string()),
+        Err(e) => Err(e.to_string())
+    }
 }
 
 fn open_db() -> sled::Db {
@@ -11,7 +14,14 @@ fn open_db() -> sled::Db {
 }
 
 pub fn get_cals_from_db() -> Vec<CalMerge> {
-    Vec::new()
+    let db = open_db();
+    db.iter()
+        .values()
+        .map(|ivec| {
+            let cal_doc = String::from_utf8(ivec.unwrap().to_vec()).unwrap();
+            serde_json::from_str(&cal_doc).unwrap()
+        })
+        .collect()
 }
 
 pub fn get_cals_from_url(url: String) -> Vec<CalMerge> {
@@ -23,6 +33,14 @@ pub fn get_cals_from_url(url: String) -> Vec<CalMerge> {
             vec![cal_m]
         }
         None => vec![],
+    }
+}
+
+pub fn delete_calmerge(url: &String) -> Option<String> {
+    let db = open_db();
+    match db.remove(url).unwrap() {
+        Some(_) => Some(url.to_string()),
+        None => None,
     }
 }
 

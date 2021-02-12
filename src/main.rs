@@ -3,8 +3,8 @@
 use actix_web::client::Client;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
-use icsutils::*;
 use icsutils::db::sled2::*;
+use icsutils::*;
 
 async fn get_http_request(url: &str) -> String {
     let client = Client::default();
@@ -30,7 +30,7 @@ async fn merge_calendars(calendars: Vec<icsutils::db::IcsCal>) -> String {
     for cal in &calendars {
         let ics_content = get_http_request(&cal.ics_url).await;
         println!("Calendar : {} fetched", &cal.name);
-        resp.push_str(&parse_calendar_content(&cal.name, ics_content));
+        resp.push_str(&parse_calendar_content(cal.clone(), ics_content));
     }
 
     resp.push_str(END_VCALENDAR);
@@ -48,22 +48,24 @@ async fn index(url: web::Data<AppState>) -> String {
 }
 
 #[post("/createcal")]
-async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> String {
+async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> impl Responder {
     let cal_struct = icsutils::db::CalMerge {
         name: cal.name.to_string(),
         url: cal.url.to_string(),
-        calendars: cal.calendars.to_vec()
+        calendars: cal.calendars.to_vec(),
     };
     match insert_cal(cal_struct) {
-        Ok(r) => r,
-        Err(e) => format!("Error /{:?}", e),
+        Ok(r) => HttpResponse::Created().body(r),
+        Err(e) => HttpResponse::BadRequest().body(format!("Error /{:?}", e)),
     }
 }
 
 #[get("/init")]
-async fn init() -> String {
-    init_db();
-    "DONE DB initialized".to_string()
+async fn init() -> impl Responder {
+    match init_db() {
+        Ok(msg) => HttpResponse::Ok().body(msg),
+        Err(err) => HttpResponse::BadRequest().body(err),
+    }
 }
 
 #[get("/readdb")]
@@ -76,8 +78,16 @@ async fn get_cal(path: web::Path<(String,)>) -> impl Responder {
     let cal_url = path.into_inner().0;
     let cal_merge = get_cals_from_url(cal_url);
     match cal_merge.first() {
-        Some(cal_m) => HttpResponse::Ok()
-            .body(serde_json::to_string(cal_m).unwrap()),
+        Some(cal_m) => HttpResponse::Ok().body(serde_json::to_string(cal_m).unwrap()),
+        None => HttpResponse::NotFound().body("No merge configuraion found"),
+    }
+}
+
+#[get("/delete_cal/{cal_url}")]
+async fn delete_cal(path: web::Path<(String,)>) -> impl Responder {
+    let cal_url = path.into_inner().0;
+    match delete_calmerge(&cal_url) {
+        Some(url) => HttpResponse::Ok().body(format!("Calendar {} deleted", url)),
         None => HttpResponse::NotFound().body("No merge configuraion found"),
     }
 }
@@ -94,11 +104,8 @@ async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
     }
 }
 
-
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-
     HttpServer::new(move || {
         App::new()
             .service(index)
@@ -106,6 +113,7 @@ async fn main() -> std::io::Result<()> {
             .service(readdb)
             .service(serve_ics)
             .service(create_cal)
+            .service(delete_cal)
             .service(get_cal)
     })
     .bind("0.0.0.0:8080")?

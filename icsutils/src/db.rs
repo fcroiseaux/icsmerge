@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct IcsCal {
     //The list of ical urls we want to merge
     pub name: String,
+    pub is_private: bool,
     pub ics_url: String,
 }
 

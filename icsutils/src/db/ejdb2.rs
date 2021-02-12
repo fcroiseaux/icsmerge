@@ -3,9 +3,12 @@ use ejdb::{bson, query, Database, DatabaseOpenMode};
 use rand::Rng;
 use crate::db::*;
 
-pub fn init_db() {
+pub fn init_db() -> Result<String, String> {
     let db = open_db();
-    db.drop_collection("calendars", true).unwrap();
+    match db.drop_collection("calendars", true) {
+        Ok(_) => Ok("DB initialized".to_string()),
+        Err(err) => Err(err.to_string()),
+    }
 }
 
 fn open_db() -> Database {
@@ -16,6 +19,10 @@ fn open_db() -> Database {
         .unwrap()
 }
 
+pub fn delete_calmerge(_url: &String) -> Option<String> {
+    None
+}
+
 pub fn get_cals_from_db() -> Vec<CalMerge> {
     get_cals_from_query(query::Q.empty())
 }
@@ -24,7 +31,7 @@ pub fn get_cals_from_url(url: String) -> Vec<CalMerge> {
     get_cals_from_query(query::Q.field("url").eq(url))
 }
 
-pub fn get_cals_from_query(q: query::Query) -> Vec<CalMerge> {
+fn get_cals_from_query(q: query::Query) -> Vec<CalMerge> {
     let db = open_db();
     let cal_coll = db.collection("calendars").unwrap();
     let doc_list = cal_coll.query(q, query::QH.empty());
