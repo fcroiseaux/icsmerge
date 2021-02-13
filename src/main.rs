@@ -1,10 +1,12 @@
 // #![deny(warnings)]
 
 use actix_web::client::Client;
+use actix_files::Files;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
 use icsutils::db::sled2::*;
 use icsutils::*;
+use icsutils::db::CalMerge;
 
 async fn get_http_request(url: &str) -> String {
     let client = Client::default();
@@ -23,11 +25,14 @@ async fn get_http_request(url: &str) -> String {
     }
 }
 
-async fn merge_calendars(calendars: Vec<icsutils::db::IcsCal>) -> String {
+async fn merge_calendars(merge_conf: CalMerge) -> String {
     let mut resp = String::from(BEGIN_VCALENDAR);
     resp.push_str(NEW_LINE);
+    resp.push_str(X_WR_CALNAME);
+    resp.push_str(&merge_conf.name);
+    resp.push_str(NEW_LINE);
 
-    for cal in &calendars {
+    for cal in &merge_conf.calendars {
         let ics_content = get_http_request(&cal.ics_url).await;
         println!("Calendar : {} fetched", &cal.name);
         resp.push_str(&parse_calendar_content(cal.clone(), ics_content));
@@ -37,14 +42,11 @@ async fn merge_calendars(calendars: Vec<icsutils::db::IcsCal>) -> String {
     resp
 }
 
-struct AppState {
-    cal_url: String,
-}
+
 
 #[get("/")]
-async fn index(url: web::Data<AppState>) -> String {
-    let url_s = &url.cal_url;
-    format!("Try to send request to /{}", url_s)
+async fn index() -> String {
+    format!("Doc tp come soon")
 }
 
 #[post("/createcal")]
@@ -99,7 +101,7 @@ async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
     match cal_merge.first() {
         Some(cal_m) => HttpResponse::Ok()
             .header("Content-Type", "text/calendar")
-            .body(merge_calendars(cal_m.clone().calendars).await),
+            .body(merge_calendars(cal_m.clone()).await),
         None => HttpResponse::NotFound().body("No merge configuraion found"),
     }
 }
@@ -108,13 +110,15 @@ async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
-            .service(index)
+ //           .service(index)
             .service(init)
             .service(readdb)
             .service(serve_ics)
             .service(create_cal)
             .service(delete_cal)
             .service(get_cal)
+            .service(Files::new("/", "website/").show_files_listing())
+
     })
     .bind("0.0.0.0:8080")?
     .run()

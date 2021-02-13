@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="style.css" />
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="icsmerge">icsmerge</h1>
+<p>This project is aimed to allow sharing multiple calendar coming from deifferent sources in one single ics file. I wrote this program because I use multiple calendars and need to share my agenda with friends and colleagues without sharing all details on all calendars. I also want to be able to make distinction between calendars.</p>
+<h2 id="configuration-structure">Configuration structure</h2>
+<p>The server supports exposing multiple ics files through json configuration structure Each configration structure has the following format :</p>
+<h3 id="calendars.json">calendars.json</h3>
+<pre><code>{
+  &quot;name&quot;: &quot;Calendarr Name&quot;,   
+  &quot;url&quot;: &quot;calendar_url.ics&quot;,
+  &quot;calendars&quot;: [
+    {
+      &quot;name&quot;: &quot;Cal_1_Name&quot;,
+      &quot;is_private&quot;: true,
+      &quot;ics_url&quot;: &quot;https://calendar.google.com/calendar/ical/adresse00gmail.com/private-tititatatoto/basic.ics&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Cal_2_Name&quot;,
+      &quot;is_private&quot;: false,
+      &quot;ics_url&quot;: &quot;https://calendar.google.com/calendar/ical/adresse10gmail.com/private-tititatatoto/basic.ics&quot;
+    },
+    {
+      &quot;name&quot;: &quot;Cal_3_Name&quot;,
+      &quot;is_private&quot;: true,
+      &quot;ics_url&quot;: &quot;https://calendar.google.com/calendar/u/1?cid=xyzxyzxyzxyzxyzxyzxyz&quot;
+    }
+  ]
+}</code></pre>
+<p>With this configuration json structure, three calendards will be merged in one.</p>
+<ul>
+<li>The first one is private so location and description is removed and summary is replaced by the content of he <code>name</code> field, being <strong>Cal_1_Name</strong> in this exemple.</li>
+<li>The second is not public so all details will be shown in the merged calendar</li>
+<li>The third is private, same behavior as the first.</li>
+</ul>
+<p>The merged calendar is accessible at : http://localhost:8080/calendar_url.ics</p>
+<h2 id="rest-api">REST API</h2>
+<p>A basic REST API is provided to add, read and remove merge configuration.</p>
+<h3 id="adding-a-new-configuration">Adding a new configuration</h3>
+<p>Each configuration is identified by its url. To add a new configuration, simply POST the json structure to http://localhost:8080/create_cal.</p>
+<p>You can use the provided template to create your one file and use the following command line to add the configuration:</p>
+<pre><code>curl -X POST -H &quot;Content-Type: application/json&quot; \
+    -d @calendars.json http://localhost:8080/createcal</code></pre>
+</body>
+</html>
