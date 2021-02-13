@@ -10,7 +10,7 @@ pub struct IcsCal {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct CalMerge {
+pub struct MergeConf {
     //The list of ical urls we want to merge
     pub name: String,
     pub url: String,

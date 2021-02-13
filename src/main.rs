@@ -6,7 +6,7 @@ use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 
 use icsutils::db::sled2::*;
 use icsutils::*;
-use icsutils::db::CalMerge;
+use icsutils::db::MergeConf;
 
 async fn get_http_request(url: &str) -> String {
     let client = Client::default();
@@ -25,7 +25,7 @@ async fn get_http_request(url: &str) -> String {
     }
 }
 
-async fn merge_calendars(merge_conf: CalMerge) -> String {
+async fn merge_calendars(merge_conf: MergeConf) -> String {
     let mut resp = String::from(BEGIN_VCALENDAR);
     resp.push_str(NEW_LINE);
     resp.push_str(X_WR_CALNAME);
@@ -49,9 +49,9 @@ async fn index() -> String {
     format!("Doc tp come soon")
 }
 
-#[post("/createcal")]
-async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> impl Responder {
-    let cal_struct = icsutils::db::CalMerge {
+#[post("/create_cal")]
+async fn create_cal(cal: web::Json<icsutils::db::MergeConf>) -> impl Responder {
+    let cal_struct = icsutils::db::MergeConf {
         name: cal.name.to_string(),
         url: cal.url.to_string(),
         calendars: cal.calendars.to_vec(),
@@ -62,7 +62,7 @@ async fn create_cal(cal: web::Json<icsutils::db::CalMerge>) -> impl Responder {
     }
 }
 
-#[get("/init")]
+#[get("/init_db")]
 async fn init() -> impl Responder {
     match init_db() {
         Ok(msg) => HttpResponse::Ok().body(msg),
@@ -70,7 +70,7 @@ async fn init() -> impl Responder {
     }
 }
 
-#[get("/readdb")]
+#[get("/list_db")]
 async fn readdb() -> String {
     serde_json::to_string(&get_cals_from_db()).unwrap()
 }

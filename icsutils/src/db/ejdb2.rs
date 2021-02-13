@@ -23,15 +23,15 @@ pub fn delete_calmerge(_url: &String) -> Option<String> {
     None
 }
 
-pub fn get_cals_from_db() -> Vec<CalMerge> {
+pub fn get_cals_from_db() -> Vec<MergeConf> {
     get_cals_from_query(query::Q.empty())
 }
 
-pub fn get_cals_from_url(url: String) -> Vec<CalMerge> {
+pub fn get_cals_from_url(url: String) -> Vec<MergeConf> {
     get_cals_from_query(query::Q.field("url").eq(url))
 }
 
-fn get_cals_from_query(q: query::Query) -> Vec<CalMerge> {
+fn get_cals_from_query(q: query::Query) -> Vec<MergeConf> {
     let db = open_db();
     let cal_coll = db.collection("calendars").unwrap();
     let doc_list = cal_coll.query(q, query::QH.empty());
@@ -39,13 +39,13 @@ fn get_cals_from_query(q: query::Query) -> Vec<CalMerge> {
     items
         .map(|doc| {
             let bson = bson::to_bson(&doc.unwrap()).unwrap();
-            let c: CalMerge = bson::from_bson(bson).unwrap();
+            let c: MergeConf = bson::from_bson(bson).unwrap();
             c
         })
         .collect()
 }
 
-pub fn insert_cal(cal: CalMerge) -> Result<String, String> {
+pub fn insert_cal(cal: MergeConf) -> Result<String, String> {
     let db = open_db();
     let cal_coll = db.collection("calendars").unwrap();
     let cal_url = match cal.url.as_str() {

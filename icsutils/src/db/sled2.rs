@@ -13,7 +13,7 @@ fn open_db() -> sled::Db {
     sled::open("mergeics_sled_db").unwrap()
 }
 
-pub fn get_cals_from_db() -> Vec<CalMerge> {
+pub fn get_cals_from_db() -> Vec<MergeConf> {
     let db = open_db();
     db.iter()
         .values()
@@ -24,12 +24,12 @@ pub fn get_cals_from_db() -> Vec<CalMerge> {
         .collect()
 }
 
-pub fn get_cals_from_url(url: String) -> Vec<CalMerge> {
+pub fn get_cals_from_url(url: String) -> Vec<MergeConf> {
     let db = open_db();
     match db.get(url).unwrap() {
         Some(ivec) => {
             let cal_doc = String::from_utf8(ivec.to_vec()).unwrap();
-            let cal_m: CalMerge = serde_json::from_str(&cal_doc).unwrap();
+            let cal_m: MergeConf = serde_json::from_str(&cal_doc).unwrap();
             vec![cal_m]
         }
         None => vec![],
@@ -44,7 +44,7 @@ pub fn delete_calmerge(url: &String) -> Option<String> {
     }
 }
 
-pub fn insert_cal(mut cal: CalMerge) -> Result<String, String> {
+pub fn insert_cal(mut cal: MergeConf) -> Result<String, String> {
     let db = open_db();
     if cal.url == "" {
         cal.url = format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics";
