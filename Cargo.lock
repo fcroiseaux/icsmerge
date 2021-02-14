@@ -1139,6 +1139,7 @@ dependencies = [
  "actix-files",
  "actix-web",
  "icsutils",
+ "log",
  "pretty_env_logger",
  "serde",
  "serde_json",

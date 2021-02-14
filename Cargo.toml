@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+log = "0.4"
 icsutils = { path = "icsutils" }
 actix-web = { version = "3.3.2", features = ["openssl"] }
 actix-files = "0.5.0"

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>Merging multiple ics calendars into one with privacy options</title>
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+    <h1 class="title">Merging multiple ics calendars into one with privacy options</h1>
+    <nav id="TOC"><ul>
+<li><a href="#configuration-structure">0.1 Configuration structure</a><ul>
+<li><a href="#calendarsjson">0.1.1 calendars.json</a><ul></ul></li></ul></li>
+<li><a href="#rest-api">0.2 REST API</a><ul>
+<li><a href="#adding-a-new-configuration">0.2.1 Adding a new configuration</a><ul></ul></li>
+<li><a href="#listing-all-configurations">0.2.2 Listing all configurations</a><ul></ul></li>
+<li><a href="#getting-a-specific-config-structure">0.2.3 Getting a specific config structure</a><ul></ul></li>
+<li><a href="#removing-a-config-structure">0.2.4 Removing a config structure</a><ul></ul></li>
+<li><a href="#initialise-the-db">0.2.5 Initialise the DB</a><ul></ul></li>
+<li><a href="#getting-the-merged-ics-calendar-file">0.2.6 Getting the merged .ics calendar file</a><ul></ul></li></ul></li></ul></nav><p>This project is aimed to allow sharing multiple calendar coming from different sources in one single ics file.
+I wrote this program because I use multiple calendars and often need to share my agendas with friends and colleagues without sharing all details on all calendars. I also want to be able to make distinction between calendars.</p>
+<p>Repository: <a href="https://github.com/fcroiseaux/icsmerge">https://github.com/fcroiseaux/icsmerge</a></p>
+<h2 id="configuration-structure" class="section-header"><a href="#configuration-structure">0.1 Configuration structure</a></h2>
+<p>The server supports exposing multiple ics files through json configuration structure
+Each configration structure has the following format :</p>
+<h3 id="calendarsjson" class="section-header"><a href="#calendarsjson">0.1.1 calendars.json</a></h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+{
+  <span class="string">&quot;name&quot;</span>: <span class="string">&quot;Calendarr Name&quot;</span>,   
+  <span class="string">&quot;url&quot;</span>: <span class="string">&quot;calendar_url.ics&quot;</span>,
+  <span class="string">&quot;calendars&quot;</span>: [
+    {
+      <span class="string">&quot;name&quot;</span>: <span class="string">&quot;Cal_1_Name&quot;</span>,
+      <span class="string">&quot;is_private&quot;</span>: <span class="bool-val">true</span>,
+      <span class="string">&quot;ics_url&quot;</span>: <span class="string">&quot;https://calendar.google.com/calendar/ical/adresse00gmail.com/private-tititatatoto/basic.ics&quot;</span>
+    },
+    {
+      <span class="string">&quot;name&quot;</span>: <span class="string">&quot;Cal_2_Name&quot;</span>,
+      <span class="string">&quot;is_private&quot;</span>: <span class="bool-val">false</span>,
+      <span class="string">&quot;ics_url&quot;</span>: <span class="string">&quot;https://calendar.google.com/calendar/ical/adresse10gmail.com/private-tititatatoto/basic.ics&quot;</span>
+    },
+    {
+      <span class="string">&quot;name&quot;</span>: <span class="string">&quot;Cal_3_Name&quot;</span>,
+      <span class="string">&quot;is_private&quot;</span>: <span class="bool-val">true</span>,
+      <span class="string">&quot;ics_url&quot;</span>: <span class="string">&quot;https://calendar.google.com/calendar/u/1?cid=xyzxyzxyzxyzxyzxyzxyz&quot;</span>
+    }
+  ]
+}</pre></div>
+<p>With this configuration json structure, three calendards will be merged in one. </p>
+<ul>
+<li>The first one is private so locations and descriptions are removed and summary is replaced by the content of he <code>name</code> field, being <strong>Cal_1_Name</strong> in this example.</li>
+<li>The second is not public so all details will be shown in the merged calendar</li>
+<li>The third is private, same behavior as the first.</li>
+</ul>
+<p>The merged calendar is accessible at : <a href="http://localhost:8080/calendar_url.ics">http://localhost:8080/calendar_url.ics</a>
+If an empty string is provided in the url field, a random url is generated and returned, otherwise, the provided url is returned. </p>
+<h2 id="rest-api" class="section-header"><a href="#rest-api">0.2 REST API</a></h2>
+<p>A basic REST API is provided to add, read and remove merge configuration.</p>
+<h3 id="adding-a-new-configuration" class="section-header"><a href="#adding-a-new-configuration">0.2.1 Adding a new configuration</a></h3>
+<p>Each configuration is identified by its url. To add a new configuration, simply post the json structure to <a href="http://localhost:8080/api/create_cal">http://localhost:8080/api/create_cal</a>.</p>
+<p>You can use the provided template to create your own file and use the following command line to add the configuration:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="ident">curl</span> <span class="op">-</span><span class="ident">X</span> <span class="ident">POST</span> <span class="op">-</span><span class="ident">H</span> <span class="string">&quot;Content-Type: application/json&quot;</span> \
+    <span class="op">-</span><span class="ident">d</span> @<span class="ident">calendars</span>.<span class="ident">json</span> <span class="ident">http</span>:<span class="comment">//localhost:8080/createcal</span></pre></div>
+<h3 id="listing-all-configurations" class="section-header"><a href="#listing-all-configurations">0.2.2 Listing all configurations</a></h3>
+<p>You can list all available configurations by invoking : <a href="http://localhost:8080/api/list_db">http://localhost:8080/api/list_db</a>
+Since there is no security neither access management with this version, all config structures will be displayed. <em><strong>Be aware that all your calendars url are visible</strong></em></p>
+<h3 id="getting-a-specific-config-structure" class="section-header"><a href="#getting-a-specific-config-structure">0.2.3 Getting a specific config structure</a></h3>
+<p>A specific config structure can be read by invoking : <a href="http://localhost:8080/api/get_cal/calendar_url">http://localhost:8080/api/get_cal/calendar_url</a></p>
+<h3 id="removing-a-config-structure" class="section-header"><a href="#removing-a-config-structure">0.2.4 Removing a config structure</a></h3>
+<p>To delete a config structure, invoke : <a href="http://localhost:8080/api/delete_cal/cal_url">http://localhost:8080/api/delete_cal/cal_url</a></p>
+<h3 id="initialise-the-db" class="section-header"><a href="#initialise-the-db">0.2.5 Initialise the DB</a></h3>
+<p>You can empty the database by invoking : <a href="http://localhost:8080/api/init_db">http://localhost:8080/api/init_db</a></p>
+<h3 id="getting-the-merged-ics-calendar-file" class="section-header"><a href="#getting-the-merged-ics-calendar-file">0.2.6 Getting the merged .ics calendar file</a></h3>
+<p>The url used to display the merged calendars in an application (Gmail, Outlook, ...) is <a href="http://localhost:8080/calendar_url">http://localhost:8080/calendar_url</a></p>
+
+    
+</body>
+</html>

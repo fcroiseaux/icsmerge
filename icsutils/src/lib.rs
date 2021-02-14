@@ -5,6 +5,7 @@ use crate::db::IcsCal;
 
 pub mod db;
 
+/// ical kerwords
 pub const BEGIN_VTIMEZONE: &str = "BEGIN:VTIMEZONE";
 pub const BEGIN_VCALENDAR: &str = "BEGIN:VCALENDAR";
 pub const END_VCALENDAR: &str = "END:VCALENDAR";
@@ -17,10 +18,13 @@ pub const VERSION: &str = "VERSION:";
 pub const X_WR_CALNAME: &str = "X-WR-CALNAME:";
 pub const CALSCALE: &str = "CALSCALE:";
 
+/// List of keywords that must be ignored when the calendar is private
 const PRIV_ICAL_KEYWORDS: [&str; 2] = [
     DESCRIPTION,
     PRODID
 ];
+
+/// List of keywords that must be ignored in order to merge calendars
 const PUB_ICAL_KEYWORDS: [&str; 7] = [
     BEGIN_VCALENDAR,
     END_VCALENDAR,
@@ -33,7 +37,10 @@ const PUB_ICAL_KEYWORDS: [&str; 7] = [
 
 pub const NEW_LINE: &str = "\n";
 
-pub fn parse_calendar_content(calendar: IcsCal, resp: String) -> String {
+/// parse an ical stream
+/// calendar: IcsCal the detailed information about the calendar
+/// ical_str: Sttring the content of the file
+pub fn parse_calendar_content(calendar: IcsCal, ical_str: String) -> String {
     fn not_filtered_keywords(cal_line: &str, keywords: &Vec<&str>) -> bool {
         keywords
             .iter()
@@ -41,7 +48,7 @@ pub fn parse_calendar_content(calendar: IcsCal, resp: String) -> String {
             .is_none()
     }
 
-    let reader = ical::LineReader::new(BufReader::new(StringReader::new(&resp)));
+    let reader = ical::LineReader::new(BufReader::new(StringReader::new(&ical_str)));
     let mut keywords = PUB_ICAL_KEYWORDS.to_vec();
     if calendar.is_private  {
         keywords.extend_from_slice(&PRIV_ICAL_KEYWORDS.to_vec());

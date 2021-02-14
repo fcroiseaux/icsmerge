@@ -23,7 +23,8 @@
 <h1 class="title">icsmerge</h1>
 </header>
 <h1 id="merging-multiple-ics-calendars-into-one-with-privacy-options">Merging multiple ics calendars into one with privacy options</h1>
-<p>This project is aimed to allow sharing multiple calendar coming from deifferent sources in one single ics file. I wrote this program because I use multiple calendars and need to share my agenda with friends and colleagues without sharing all details on all calendars. I also want to be able to make distinction between calendars.</p>
+<p>This project is aimed to allow sharing multiple calendar coming from different sources in one single ics file. I wrote this program because I use multiple calendars and often need to share my agendas with friends and colleagues without sharing all details on all calendars. I also want to be able to make distinction between calendars.</p>
+<p>Repository: <a href="https://github.com/fcroiseaux/icsmerge" class="uri">https://github.com/fcroiseaux/icsmerge</a></p>
 <h2 id="configuration-structure">Configuration structure</h2>
 <p>The server supports exposing multiple ics files through json configuration structure Each configration structure has the following format :</p>
 <h3 id="calendars.json">calendars.json</h3>
@@ -50,26 +51,26 @@
 }</code></pre>
 <p>With this configuration json structure, three calendards will be merged in one.</p>
 <ul>
-<li>The first one is private so location and description is removed and summary is replaced by the content of he <code>name</code> field, being <strong>Cal_1_Name</strong> in this exemple.</li>
+<li>The first one is private so locations and descriptions are removed and summary is replaced by the content of he <code>name</code> field, being <strong>Cal_1_Name</strong> in this example.</li>
 <li>The second is not public so all details will be shown in the merged calendar</li>
 <li>The third is private, same behavior as the first.</li>
 </ul>
-<p>The merged calendar is accessible at : <a href="http://localhost:8080/calendar_url.ics" class="uri">http://localhost:8080/calendar_url.ics</a></p>
+<p>The merged calendar is accessible at : <a href="http://localhost:8080/calendar_url.ics" class="uri">http://localhost:8080/calendar_url.ics</a> If an empty string is provided in the url field, a random url is generated and returned, otherwise, the provided url is returned.</p>
 <h2 id="rest-api">REST API</h2>
 <p>A basic REST API is provided to add, read and remove merge configuration.</p>
 <h3 id="adding-a-new-configuration">Adding a new configuration</h3>
-<p>Each configuration is identified by its url. To add a new configuration, simply post the json structure to <a href="http://localhost:8080/create_cal" class="uri">http://localhost:8080/create_cal</a>.</p>
+<p>Each configuration is identified by its url. To add a new configuration, simply post the json structure to <a href="http://localhost:8080/api/create_cal" class="uri">http://localhost:8080/api/create_cal</a>.</p>
 <p>You can use the provided template to create your own file and use the following command line to add the configuration:</p>
 <pre><code>curl -X POST -H &quot;Content-Type: application/json&quot; \
     -d @calendars.json http://localhost:8080/createcal</code></pre>
 <h3 id="listing-all-configurations">Listing all configurations</h3>
-<p>You can list all available configurations by invoking : <a href="http://localhost:8080/list_db" class="uri">http://localhost:8080/list_db</a> Since there is no security neither access management with this version, all config structures will be displayed. <strong><em>Be aware that all your calendars url are visible</em></strong></p>
+<p>You can list all available configurations by invoking : <a href="http://localhost:8080/api/list_db" class="uri">http://localhost:8080/api/list_db</a> Since there is no security neither access management with this version, all config structures will be displayed. <strong><em>Be aware that all your calendars url are visible</em></strong></p>
 <h3 id="getting-a-specific-config-structure">Getting a specific config structure</h3>
-<p>A specific config structure can be read by invoking : <a href="http://localhost:8080/get_cal/calendar_url" class="uri">http://localhost:8080/get_cal/calendar_url</a></p>
+<p>A specific config structure can be read by invoking : <a href="http://localhost:8080/api/get_cal/calendar_url" class="uri">http://localhost:8080/api/get_cal/calendar_url</a></p>
 <h3 id="removing-a-config-structure">Removing a config structure</h3>
-<p>To delete a config structure, invoke : <a href="http://localhost:8080/delete_cal/cal_url" class="uri">http://localhost:8080/delete_cal/cal_url</a></p>
+<p>To delete a config structure, invoke : <a href="http://localhost:8080/api/delete_cal/cal_url" class="uri">http://localhost:8080/api/delete_cal/cal_url</a></p>
 <h3 id="initialise-the-db">Initialise the DB</h3>
-<p>You can empty the database by invoking : <a href="http://localhost:8080/init_db" class="uri">http://localhost:8080/init_db</a></p>
+<p>You can empty the database by invoking : <a href="http://localhost:8080/api/init_db" class="uri">http://localhost:8080/api/init_db</a></p>
 <h3 id="getting-the-merged-.ics-calendar-file">Getting the merged .ics calendar file</h3>
 <p>The url used to display the merged calendars in an application (Gmail, Outlook, …) is <a href="http://localhost:8080/calendar_url" class="uri">http://localhost:8080/calendar_url</a></p>
 </body>
