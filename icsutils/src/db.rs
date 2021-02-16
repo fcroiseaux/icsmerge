@@ -1,13 +1,16 @@
 //! The DB module is used to isolate the databse and to ease database switching.
 //!
-//! Two DB sub-modules are provided: one for sled and the second for ejdb
-//! You must reference the module you want to use in icsmerge crate :
+//! One DB sub-module is provided for sled. If you want to use another db,
+//! e.g. ejdb, create a file ejdb2.rs and reimplements the functions as is sled2.rs
+//! after just replace :
 //! ```
-//! use icsutils::db::ejdb2::*;
+//! pub mod sled2;
+//! use icsutils::db::sled2 as db;
 //! ```
-//! or
+//! by
 //! ```
-//! use icsutils::db::ejdb2::*;
+//! pub mod ejdb2;
+//! use icsutils::db::ejdb2 as db;
 //! ```
 use serde::{Deserialize, Serialize};
 
@@ -33,5 +36,26 @@ pub struct MergeConf {
     pub calendars: Vec<IcsCal>,
 }
 
-pub mod ejdb2;
 pub mod sled2;
+use crate::db::sled2 as db;
+
+
+pub fn init_db() -> Result<String, String> {
+    db::init_db()
+}
+
+pub fn get_cals_from_db() -> Vec<String> {
+    db::get_cals_from_db()
+}
+
+pub fn get_cal_from_url(url: &str) -> Option<String> {
+    db::get_cal_from_url(url)
+}
+
+pub fn delete_calmerge(url: &String) -> Option<String> {
+    db::delete_calmerge(url)
+}
+
+pub fn insert_cal(url: String, doc: String) -> Result<String, String> {
+    db::insert_cal(url, doc)
+}
