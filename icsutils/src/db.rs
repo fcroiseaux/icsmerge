@@ -32,6 +32,8 @@ pub struct MergeConf {
     pub name: String,
     /// The endpoint of the merged calendar, must end with .ics
     pub url: String,
+    /// bcrypt encrypted password
+    pub password: String,
     /// The list of calendars that must be merged
     pub calendars: Vec<IcsCal>,
 }

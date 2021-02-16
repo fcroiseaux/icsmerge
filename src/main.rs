@@ -11,16 +11,15 @@ use actix_files::NamedFile;
 use actix_web::client::Client;
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 
-use icsutils::db as db;
+use icsutils::db;
 
 use icsutils::db::MergeConf;
 use icsutils::*;
 
-use magic_crypt::{new_magic_crypt, MagicCryptTrait};
+use bcrypt::{hash, verify};
 
-use bcrypt::{hash, verify, DEFAULT_COST};
-use serde::Deserialize;
 use rand::Rng;
+use serde::Deserialize;
 
 /// Helper to get each calendar .ics file using actix-web client
 async fn get_http_request(url: &str) -> String {
@@ -78,11 +77,16 @@ async fn create_cal(cal: web::Json<icsutils::db::MergeConf>) -> impl Responder {
     let mut cal_struct = icsutils::db::MergeConf {
         name: cal.name.to_string(),
         url: cal.url.to_string(),
+        password: String::new(),
         calendars: cal.calendars.to_vec(),
     };
     if cal_struct.url == "" {
         cal_struct.url = format!("{:x}", rand::thread_rng().gen::<u64>()) + ".ics";
     }
+    cal_struct.password = match hash(cal.password.to_string(), 4) {
+        Ok(h) => h,
+        Err(_) => panic!(),
+    };
     let doc: String = serde_json::to_string(&cal_struct).unwrap();
     match db::insert_cal(cal.url.to_string(), doc) {
         Ok(r) => HttpResponse::Created().body(r),
@@ -111,21 +115,61 @@ async fn list_db() -> impl Responder {
 }
 
 /// Returns a specific configuration struct
-async fn get_cal(path: web::Path<(String,)>) -> impl Responder {
-    let cal_url = path.into_inner().0;
-    let cal_doc = db::get_cal_from_url(&cal_url);
-    match cal_doc {
-        Some(cal_m) => HttpResponse::Ok().body(cal_m),
-        None => HttpResponse::NotFound().body("No merge config struct found"),
+async fn get_cal(path: web::Path<(String,)>, info: web::Query<AuthRequest>) -> impl Responder {
+    match &info.password {
+        Some(pwd) => {
+            let cal_url = path.into_inner().0;
+            let cal_doc = db::get_cal_from_url(&cal_url);
+            match cal_doc {
+                Some(cal) => {
+                    let cal_m: MergeConf = serde_json::from_str(&cal).unwrap();
+                    match verify(pwd, &cal_m.password) {
+                        Ok(valid) => match valid {
+                            true => HttpResponse::Ok().body(&cal),
+                            false => HttpResponse::BadRequest().body("Wrong Password"),
+                        },
+                        Err(_) => HttpResponse::BadRequest().body("Password check Error"),
+                    }
+                }
+                None => HttpResponse::NotFound().body("No merge config struct found"),
+            }
+        }
+        None => {
+            HttpResponse::BadRequest().body("A password must be provided to create a new structure")
+        }
     }
 }
 
 /// Delete a specific configuration struct
-async fn delete_cal(path: web::Path<(String,)>) -> impl Responder {
-    let cal_url = path.into_inner().0;
-    match db::delete_calmerge(&cal_url) {
-        Some(url) => HttpResponse::Ok().body(format!("Calendar {} deleted", url)),
-        None => HttpResponse::NotFound().body("No merge config struct found"),
+async fn delete_cal(path: web::Path<(String,)>, info: web::Query<AuthRequest>) -> impl Responder {
+    match &info.password {
+        Some(pwd) => {
+            let cal_url = path.into_inner().0;
+            let cal_doc = db::get_cal_from_url(&cal_url);
+            match cal_doc {
+                Some(cal) => {
+                    let cal_m: MergeConf = serde_json::from_str(&cal).unwrap();
+                    match verify(pwd, &cal_m.password) {
+                        Ok(valid) => match valid {
+                            true => match db::delete_calmerge(&cal_url) {
+                                Some(url) => {
+                                    HttpResponse::Ok().body(format!("Calendar {} deleted", url))
+                                }
+                                None => {
+                                    HttpResponse::NotFound().body("No merge config struct found")
+                                }
+                            },
+                            false => HttpResponse::BadRequest().body("Wrong Password"),
+                        },
+                        Err(_) => HttpResponse::BadRequest().body("Password check Error"),
+                    }
+                }
+                None => HttpResponse::NotFound().body("No merge config struct found"),
+            }
+        }
+        None => {
+            HttpResponse::BadRequest().body("A password must be provided to create a new structure")
+        }
     }
 }
 
@@ -137,8 +181,9 @@ async fn serve_ics(path: web::Path<(String,)>) -> impl Responder {
         Some(cal_doc) => {
             let cal_m: MergeConf = serde_json::from_str(&cal_doc).unwrap();
             HttpResponse::Ok()
-            .content_type("text/calendar")
-            .body(merge_calendars(cal_m.clone()).await)},
+                .content_type("text/calendar")
+                .body(merge_calendars(cal_m.clone()).await)
+        }
         None => HttpResponse::NotFound().body("No merge config struct found"),
     }
 }
@@ -171,46 +216,6 @@ pub struct AuthRequest {
     password: Option<String>,
 }
 
-async fn test_encrypt(info: web::Query<AuthRequest>) -> String {
-    match &info.password {
-        Some(pwd) => {
-            let hashed = match hash(pwd, 6) {
-                Ok(h) => h,
-                Err(_) => panic!(),
-            };
-            let valid = match verify("Maranatha12", &hashed) {
-                Ok(valid) => valid,
-                Err(_) => panic!(),
-            };
-            format!("{:?}", valid)
-        }
-        None => "None".to_string(),
-    }
-}
-async fn test1_encrypt(info: web::Query<AuthRequest>) -> String {
-    match &info.password {
-        Some(pwd) => {
-            let hashed = match hash(pwd, 6) {
-                Ok(h) => {
-                    let mc = new_magic_crypt!(&pwd, 256);
-                    let mc1 = new_magic_crypt!("TITITOTO", 256);
-                    let base64 = mc.encrypt_str_to_base64("Hello World how are things going ?");
-                    let dec = match mc1.decrypt_base64_to_string(&base64) {
-                        Ok(result) => result,
-                        Err(e) => format!("{:?}", e),
-                    };
-                    let mut res = String::from(base64);
-                    res.push_str(" --> ");
-                    res.push_str(&dec);
-                    res
-                }
-                Err(_) => panic!(),
-            };
-            format!("{:?}", hashed)
-        }
-        None => "None".to_string(),
-    }
-}
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
@@ -227,7 +232,6 @@ async fn main() -> std::io::Result<()> {
             )
             .service(web::resource("/").route(web::get().to(index)))
             .service(web::resource("/{cal_url}.ics").route(web::get().to(serve_ics)))
-            .service(web::resource("/encrypt").route(web::get().to(test1_encrypt)))
             .service(Files::new("/", "website/").show_files_listing())
     })
     .bind("0.0.0.0:8080")?
