@@ -1,6 +1,6 @@
 [package]
 name = "icsutils"
-version = "0.1.0"
+version = "0.5.0"
 authors = ["Fabrice CROISEAUX <fcroiseaux@gmail.com>"]
 edition = "2018"
 
@@ -9,8 +9,5 @@ edition = "2018"
 [dependencies]
 ical = { path = "ical-rs" }
 stringreader = {}
-ejdb = "0.4"
 sled = "0.34"
 serde = "1.0"
-bson = "1.1"
-serde_json = "1.0"

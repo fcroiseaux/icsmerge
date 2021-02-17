@@ -1,6 +1,12 @@
 # Merging multiple ics calendars into one with privacy options
 This project is aimed to allow sharing multiple calendar coming from different sources in one single ics file.
-I wrote this program because I use multiple calendars and often need to share my agendas with friends and colleagues without sharing all details on all calendars. I also want to be able to make distinction between calendars.
+I wrote this program because I use multiple calendars and often need to share my agendas with friends and colleagues without sharing all details on all calendars. 
+I also want to be able to make distinction between calendars. 
+
+A simple security is in place :
+- When adding a new configuration a password must be provided in clear text in the ``"password"`` field of the structure. Note that an empty password is supported as a valid password.
+- The password is encoded with bscrypt and the encoded password replace the clear text and is saved in the DB
+- In order to delete or get a specific configuration structure, the password must be provided as a query parameter. E.g. ``api/get_cal/cal_name.ics?password=the_password``
 
 Repository: <https://github.com/fcroiseaux/icsmerge>
 
@@ -13,6 +19,7 @@ Each configration structure has the following format :
 {
   "name": "Calendarr Name",   
   "url": "calendar_url.ics",
+  "password": "the_password",
   "calendars": [
     {
       "name": "Cal_1_Name",
@@ -54,19 +61,14 @@ curl -X POST -H "Content-Type: application/json" \
     -d @calendars.json http://localhost:8080/createcal
 ```
 
-### Listing all configurations
-You can list all available configurations by invoking : <http://localhost:8080/api/list_db>
-Since there is no security neither access management with this version, all config structures will be displayed. ***Be aware that all your calendars url are visible***
-
-
 ### Getting a specific config structure
-A specific config structure can be read by invoking : <http://localhost:8080/api/get_cal/calendar_url>
+A specific config structure can be read by invoking : <http://localhost:8080/api/get_cal/calendar_url/password=the_password>
 
 ### Removing a config structure
-To delete a config structure, invoke : <http://localhost:8080/api/delete_cal/cal_url>
+To delete a config structure, invoke : <http://localhost:8080/api/delete_cal/cal_url?password=the_password>
 
 ### Initialise the DB
-You can empty the database by invoking : <http://localhost:8080/api/init_db>
+You can empty the database by invoking : <http://localhost:8080/api/init_db?password=admin_password>
 
 ### Getting the merged .ics calendar file
 The url used to display the merged calendars in an application (Gmail, Outlook, ...) is <http://localhost:8080/calendar_url>

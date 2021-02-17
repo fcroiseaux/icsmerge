@@ -3,6 +3,7 @@
 //! This project is aimed to allow sharing multiple calendar coming from different sources in one single ics file.
 //! I wrote this program because I use multiple calendars and often need to share my agendas with friends and colleagues
 //! without sharing all details on all calendars. I also want to be able to make distinction between calendars.
+use clap::clap_app;
 use log::{error, info};
 
 use actix_files::Files;
@@ -20,6 +21,10 @@ use bcrypt::{hash, verify};
 
 use rand::Rng;
 use serde::Deserialize;
+
+struct AppPassword {
+    root_password: String,
+}
 
 /// Helper to get each calendar .ics file using actix-web client
 async fn get_http_request(url: &str) -> String {
@@ -98,79 +103,95 @@ async fn create_cal(cal: web::Json<icsutils::db::MergeConf>) -> impl Responder {
 }
 
 /// Reinitialise the DB
-async fn init() -> impl Responder {
-    match db::init_db() {
-        Ok(msg) => HttpResponse::Ok().body(msg),
-        Err(err) => {
-            error!("Unable to initialize the DB");
-            error!("{:?}", err);
-            HttpResponse::BadRequest().body(err)
+async fn init(root: web::Data<AppPassword>, info: web::Query<AuthRequest>) -> impl Responder {
+    fn init_the_db() -> HttpResponse {
+        match db::init_db() {
+            Ok(msg) => HttpResponse::Ok().body(msg),
+            Err(err) => {
+                error!("Unable to initialize the DB");
+                error!("{:?}", err);
+                HttpResponse::BadRequest().body(err)
+            }
+        }
+    }
+    check_root_password_and_apply(root, info, init_the_db)
+}
+
+/// Returns all configuration structures stored in the db
+/// Not used for privacy reasons but kept as an example of how to list all the db
+async fn list_db(root: web::Data<AppPassword>, info: web::Query<AuthRequest>) -> impl Responder {
+    fn list_ok() -> HttpResponse {
+        let cals: String = db::get_cals_from_db();
+        HttpResponse::Ok().body(cals)
+    }
+    check_root_password_and_apply(root, info, list_ok)
+}
+
+fn check_root_password_and_apply(
+    root: web::Data<AppPassword>,
+    info: web::Query<AuthRequest>,
+    f: fn() -> HttpResponse,
+) -> impl Responder {
+    match &info.password {
+        Some(pwd) => {
+            if pwd == &root.root_password {
+                f()
+            } else {
+                HttpResponse::BadRequest().body("Wrong Root password")
+            }
+        }
+        None => {
+            HttpResponse::BadRequest().body("Root password must be provided to list all the db")
         }
     }
 }
 
-/// Returns all configuration structures stored in the db
-async fn list_db() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::to_value(&db::get_cals_from_db()).unwrap())
+fn check_password_and_apply(
+    path: web::Path<(String,)>,
+    info: web::Query<AuthRequest>,
+    f: fn(String, String) -> HttpResponse,
+) -> impl Responder {
+    match &info.password {
+        Some(pwd) => {
+            let cal_url = path.into_inner().0;
+            let cal_doc = db::get_cal_from_url(&cal_url);
+            match cal_doc {
+                Some(cal) => {
+                    let cal_m: MergeConf = serde_json::from_str(&cal).unwrap();
+                    match verify(pwd, &cal_m.password) {
+                        Ok(valid) => match valid {
+                            true => f(cal_url, cal),
+                            false => HttpResponse::BadRequest().body("Wrong Password"),
+                        },
+                        Err(_) => HttpResponse::BadRequest().body("Password check Error"),
+                    }
+                }
+                None => HttpResponse::NotFound().body("No merge config struct found"),
+            }
+        }
+        None => {
+            HttpResponse::BadRequest().body("A password must be provided to create a new structure")
+        }
+    }
 }
 
 /// Returns a specific configuration struct
 async fn get_cal(path: web::Path<(String,)>, info: web::Query<AuthRequest>) -> impl Responder {
-    match &info.password {
-        Some(pwd) => {
-            let cal_url = path.into_inner().0;
-            let cal_doc = db::get_cal_from_url(&cal_url);
-            match cal_doc {
-                Some(cal) => {
-                    let cal_m: MergeConf = serde_json::from_str(&cal).unwrap();
-                    match verify(pwd, &cal_m.password) {
-                        Ok(valid) => match valid {
-                            true => HttpResponse::Ok().body(&cal),
-                            false => HttpResponse::BadRequest().body("Wrong Password"),
-                        },
-                        Err(_) => HttpResponse::BadRequest().body("Password check Error"),
-                    }
-                }
-                None => HttpResponse::NotFound().body("No merge config struct found"),
-            }
-        }
-        None => {
-            HttpResponse::BadRequest().body("A password must be provided to create a new structure")
-        }
+    fn ok_json(_url: String, cal: String) -> HttpResponse {
+        HttpResponse::Ok().body(&cal)
     }
+    check_password_and_apply(path, info, ok_json)
 }
 
 /// Delete a specific configuration struct
 async fn delete_cal(path: web::Path<(String,)>, info: web::Query<AuthRequest>) -> impl Responder {
-    match &info.password {
-        Some(pwd) => {
-            let cal_url = path.into_inner().0;
-            let cal_doc = db::get_cal_from_url(&cal_url);
-            match cal_doc {
-                Some(cal) => {
-                    let cal_m: MergeConf = serde_json::from_str(&cal).unwrap();
-                    match verify(pwd, &cal_m.password) {
-                        Ok(valid) => match valid {
-                            true => match db::delete_calmerge(&cal_url) {
-                                Some(url) => {
-                                    HttpResponse::Ok().body(format!("Calendar {} deleted", url))
-                                }
-                                None => {
-                                    HttpResponse::NotFound().body("No merge config struct found")
-                                }
-                            },
-                            false => HttpResponse::BadRequest().body("Wrong Password"),
-                        },
-                        Err(_) => HttpResponse::BadRequest().body("Password check Error"),
-                    }
-                }
-                None => HttpResponse::NotFound().body("No merge config struct found"),
-            }
-        }
-        None => {
-            HttpResponse::BadRequest().body("A password must be provided to create a new structure")
+    fn del_cal(url: String, _cal: String) -> HttpResponse {
+        match db::delete_calmerge(&url) {
+            Some(url) => HttpResponse::Ok().body(format!("Calendar {} deleted", url)),
+            None => HttpResponse::NotFound().body("No merge config struct found"),
         }
     }
+    check_password_and_apply(path, info, del_cal)
 }
 
 /// Returns the merged ics file
@@ -218,8 +239,29 @@ pub struct AuthRequest {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let app = clap_app!(icsmerge =>
+        (version: "0.5")
+        (author: "Fabrice Croiseaux. <fabrice@hackvest.com>")
+        (about: "Web server that allow merging multiple .ics calenars into one with privacy options.")
+        (@arg ROOT_PASSWORD: -p --root_password +required +takes_value "Set the root password")
+    );
+
+    let matches = app.clone().get_matches();
+    let password = matches.value_of("ROOT_PASSWORD");
+
+    if password.is_some() {
+        println!("{} web server started", app.render_long_version());
+    }
+
+    let root_pwd = password.unwrap();
+
+    let state_pwd = web::Data::new(AppPassword {
+        root_password: root_pwd.to_string(),
+    });
+
     HttpServer::new(move || {
         App::new()
+            .app_data(state_pwd.clone())
             .service(
                 web::scope("/api")
                     .service(web::resource("/init_db").route(web::get().to(init)))

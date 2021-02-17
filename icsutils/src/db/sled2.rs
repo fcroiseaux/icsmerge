@@ -10,7 +10,7 @@ fn open_db() -> sled::Db {
     sled::open("mergeics_sled_db").unwrap()
 }
 
-pub fn get_cals_from_db() -> Vec<String> {
+pub fn get_cals_from_db() -> String {
     let db = open_db();
     db.iter()
         .values()

@@ -46,7 +46,7 @@ pub fn init_db() -> Result<String, String> {
     db::init_db()
 }
 
-pub fn get_cals_from_db() -> Vec<String> {
+pub fn get_cals_from_db() -> String {
     db::get_cals_from_db()
 }
 
