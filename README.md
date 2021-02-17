@@ -10,6 +10,20 @@ A simple security is in place :
 
 Repository: <https://github.com/fcroiseaux/icsmerge>
 
+## Starting the server
+```
+USAGE:
+    icsmerge --admin_password <ADMIN_PASSWORD>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+OPTIONS:
+    -p, --admin_password <ADMIN_PASSWORD>    Set the admin password, used to initialise or dump the db
+```
+The admin password is used to initialise the db (i.e. emptying it), or list the content of the full db.
+
 ## Configuration structure
 The server supports exposing multiple ics files through json configuration structure
 Each configration structure has the following format :
@@ -69,6 +83,10 @@ To delete a config structure, invoke : <http://localhost:8080/api/delete_cal/cal
 
 ### Initialise the DB
 You can empty the database by invoking : <http://localhost:8080/api/init_db?password=admin_password>
+
+### Dumping the DB
+You can dump the entire content of the database by invoking : <http://localhost:8080/api/dump_db?password=admin_password>
+
 
 ### Getting the merged .ics calendar file
 The url used to display the merged calendars in an application (Gmail, Outlook, ...) is <http://localhost:8080/calendar_url>

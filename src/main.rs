@@ -23,7 +23,7 @@ use rand::Rng;
 use serde::Deserialize;
 
 struct AppPassword {
-    root_password: String,
+    admin_password: String,
 }
 
 /// Helper to get each calendar .ics file using actix-web client
@@ -114,7 +114,7 @@ async fn init(root: web::Data<AppPassword>, info: web::Query<AuthRequest>) -> im
             }
         }
     }
-    check_root_password_and_apply(root, info, init_the_db)
+    check_admin_password_and_apply(root, info, init_the_db)
 }
 
 /// Returns all configuration structures stored in the db
@@ -124,17 +124,17 @@ async fn list_db(root: web::Data<AppPassword>, info: web::Query<AuthRequest>) ->
         let cals: String = db::get_cals_from_db();
         HttpResponse::Ok().body(cals)
     }
-    check_root_password_and_apply(root, info, list_ok)
+    check_admin_password_and_apply(root, info, list_ok)
 }
 
-fn check_root_password_and_apply(
+fn check_admin_password_and_apply(
     root: web::Data<AppPassword>,
     info: web::Query<AuthRequest>,
     f: fn() -> HttpResponse,
 ) -> impl Responder {
     match &info.password {
         Some(pwd) => {
-            if pwd == &root.root_password {
+            if pwd == &root.admin_password {
                 f()
             } else {
                 HttpResponse::BadRequest().body("Wrong Root password")
@@ -243,20 +243,20 @@ async fn main() -> std::io::Result<()> {
         (version: "0.5")
         (author: "Fabrice Croiseaux. <fabrice@hackvest.com>")
         (about: "Web server that allow merging multiple .ics calenars into one with privacy options.")
-        (@arg ROOT_PASSWORD: -p --root_password +required +takes_value "Set the root password")
+        (@arg ADMIN_PASSWORD: -p --admin_password +required +takes_value "Set the admin password, used to initialise or dump the db")
     );
 
     let matches = app.clone().get_matches();
-    let password = matches.value_of("ROOT_PASSWORD");
+    let password = matches.value_of("ADMIN_PASSWORD");
 
     if password.is_some() {
         println!("{} web server started", app.render_long_version());
     }
 
-    let root_pwd = password.unwrap();
+    let admin_pwd = password.unwrap();
 
     let state_pwd = web::Data::new(AppPassword {
-        root_password: root_pwd.to_string(),
+        admin_password: admin_pwd.to_string(),
     });
 
     HttpServer::new(move || {
