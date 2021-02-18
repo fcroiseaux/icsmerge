@@ -239,21 +239,34 @@ pub struct AuthRequest {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    simple_logger::SimpleLogger::new()
+        .with_level(log::LevelFilter::Info)
+        .init()
+        .unwrap();
+
     let app = clap_app!(icsmerge =>
         (version: "0.5")
         (author: "Fabrice Croiseaux. <fabrice@hackvest.com>")
         (about: "Web server that allow merging multiple .ics calenars into one with privacy options.")
-        (@arg ADMIN_PASSWORD: -p --admin_password +required +takes_value "Set the admin password, used to initialise or dump the db")
+        (@arg ADMIN_PASSWORD: -p --admin_password +takes_value "Set the admin password, used to initialise or dump the db")
     );
 
     let matches = app.clone().get_matches();
-    let password = matches.value_of("ADMIN_PASSWORD");
 
-    if password.is_some() {
-        println!("{} web server started", app.render_long_version());
-    }
-
-    let admin_pwd = password.unwrap();
+    let admin_pwd = match matches.value_of("ADMIN_PASSWORD") {
+        Some(p) => p.to_string(),
+        None => match std::env::var("ADMIN_PASSWORD") {
+            Ok(env_p) => {
+                info!("ADMIN_PASSWORD provided as an environment variable");
+                env_p
+            }
+            Err(_e) => {
+                app.clone().print_long_help().unwrap();
+                error!("ADMIN_PASSWORD must be provided either as a command line parameter or an environment variable");
+                std::process::exit(1);
+            }
+        },
+    };
 
     let state_pwd = web::Data::new(AppPassword {
         admin_password: admin_pwd.to_string(),
