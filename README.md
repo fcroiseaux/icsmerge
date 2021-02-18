@@ -23,10 +23,11 @@ OPTIONS:
     -p, --admin_password <ADMIN_PASSWORD>    Set the admin password, used to initialise or dump the db
 ```
 The admin password is used to initialise the db (i.e. emptying it), or list the content of the full db.
+It must be provided on the command line or through an environment variable named ADMIN_PASSWORD.
 
 ## Configuration structure
-The server supports exposing multiple ics files through json configuration structure
-Each configration structure has the following format :
+The server supports exposing multiple ics files through a json configuration structure.
+Each configuration structure has the following format :
 
 ### calendars.json
 ```
@@ -53,15 +54,16 @@ Each configration structure has the following format :
   ]
 }
 ```
-With this configuration json structure, three calendards will be merged in one. 
+With this configuration structure, three calendars will be merged in one. 
 
 - The first one is private so locations and descriptions are removed and summary is replaced by the content of he ```name``` field, being **Cal_1_Name** in this example.
-- The second is not public so all details will be shown in the merged calendar
+- The second is public so all details will be shown in the merged calendar
 - The third is private, same behavior as the first.
 
 The merged calendar is accessible at : <http://localhost:8080/calendar_url.ics>
 If an empty string is provided in the url field, a random url is generated and returned, otherwise, the provided url is returned. 
 
+The password field contains the password that must be used to read or delete the calendar. It is saved in the db after being hashed with bcrypt.
 ## REST API
 A basic REST API is provided to add, read and remove merge configuration.
 
@@ -76,15 +78,15 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 ### Getting a specific config structure
-A specific config structure can be read by invoking : <http://localhost:8080/api/get_cal/calendar_url/password=the_password>
+A specific config structure can be read by invoking : <http://localhost:8080/api/get_cal/calendar_url?password=the_password>
 
 ### Removing a config structure
 To delete a config structure, invoke : <http://localhost:8080/api/delete_cal/cal_url?password=the_password>
 
-### Initialise the DB
+### Initialise the DB - ADMIN Password needed
 You can empty the database by invoking : <http://localhost:8080/api/init_db?password=admin_password>
 
-### Dumping the DB
+### Dumping the DB - ADMIN Password needed
 You can dump the entire content of the database by invoking : <http://localhost:8080/api/dump_db?password=admin_password>
 
 
